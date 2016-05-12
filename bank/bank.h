@@ -33,9 +33,6 @@ typedef struct _Bank
     HashTable* logged_user_ht;
     HashTable* user_balance_ht;
 
-    int rd1;
-    int rd2;
-    int rd3;
 } Bank;
 
 Bank* bank_create();

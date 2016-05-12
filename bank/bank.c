@@ -4,6 +4,8 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include "hash_table.h"
+#include <errno.h>
+#include <limits.h>
 
 const int MAX_USER_NAME_SIZE = 250;
 const int MAX_CARD_NAME_SIZE = 256;
@@ -72,7 +74,6 @@ int check_username(char* username) {
 	}
 	//TODO: potential bufferoverflow
 	int len = strlen(username);
-	int flag;
 	for (i = 0; (i < len); i++) {
 		if ((username[i] >= 'a' && username[i] <= 'z') ||
 				(username[i] >= 'A' && username[i] <= 'Z')) {
@@ -100,7 +101,7 @@ int check_pin(char* pin) {
     return 0;
 }
 
-/* NOT yet check negative or positive*/
+/* TODO:not check negative or positive*/
 int check_balance(char* args) {
     int len = strlen(args);
 	 int i;
@@ -111,17 +112,15 @@ int check_balance(char* args) {
     }
     return 0;
 }
-void bank_create_user(Bank* bank, char* args1, char* args2, char* args3) {
-	FILE *fp;
-	char card_name[MAX_CARD_NAME_SIZE + 1];
-	
+
+void bank_create_user(Bank* bank, char* args1, char* args2, char* args3) {	
 	if (!args1 || !args2 || !args3) {
       printf("Usage: create-user <user-name> <pin> <balance>\n");
 		return;		
 	}
 	
-	if (check_username(arg1) != 0 || check_pin(arg2) != 0 
-		|| check_balance(arg3) != 0) {
+	if (check_username(args1) != 0 || check_pin(args2) != 0 
+		|| check_balance(args3) != 0) {
    	printf("Usage: create-user <user-name> <pin> <balance>\n");
 		return;	
 	} 
@@ -131,101 +130,113 @@ void bank_create_user(Bank* bank, char* args1, char* args2, char* args3) {
        return;
    }
 
+	FILE *fp;
+	char card_name[MAX_CARD_NAME_SIZE + 1];
+	
 	memset(card_name, 0, MAX_CARD_NAME_SIZE);
    strcat(card_name, args1);
    strcat(card_name, ".card");
 
-   fp = fopen(card_file_name, "w");
+   fp = fopen(card_name, "w");
    if (!fp) {
        printf("Error creating card file for user %s\n", args1);
        return;
    }
 
+	printf("Created user %s\n", args1);
+
+	/* write to card*/
    fprintf(fp, "%s\n", args1);
    fprintf(fp, "%s\n", args2);
    fclose(fp);
 
+ 	char* tmp;
    tmp = (char*)malloc(64);
-   strcpy(tmp, args3);
+	int len = strlen(args3);
+	if (len > 64) {
+		printf("Usage: create-user <user-name> <pin> <balance>\n");
+		return;
+	}
+   strncpy(tmp, args3, len);
    hash_table_add(bank->user_balance_ht, args1, tmp);
-
-   printf("Created user %s\n", args1);
-
 }
-void handle_deposit(Bank* bank, char* args1, char* args2) {
-    int ret = 0;
-    int amt = 0;
-    int balance = 0;
-    char *tmp;
-    char card_file_name[MAX_CARD_FILE_NAME_SIZE + 1];
 
-    if (args1 == NULL || args2 == NULL) {
+/* check integer overflow and*/
+int check_amt(char* args) {
+   int i;
+   int len = strlen(args);
+   for (i = 0; i < len; ++i) {
+       if (!(args[i] >= '0' && args[i] <= '9')) {
+          return 1;
+       }
+   }
+	
+	// TODO: check integer overflow
+	
+	
+   return 0;
+}
+
+void bank_deposit(Bank* bank, char* name, char* amt) {
+    if (!name || !amt) {
         printf("Usage: deposit <user-name> <amt>\n");
         return;
     }
-
-    ret = check_username(args1); 
-    if (ret != 0) {
+   if (check_username(name) || check_amt(amt)) {
         printf("Usage: deposit <user-name> <amt>\n");
         return;
     }
+   if (!hash_table_find(bank->user_balance_ht, name)) {
+       printf("No such user\n");
+       return;
+   }
+	
+	// handle name
+	char card_name[MAX_CARD_NAME_SIZE + 1];
+   memset(card_name, 0, MAX_CARD_NAME_SIZE);
+   strcat(card_name, name);
+   strcat(card_name, ".card");
 
-    ret = check_amt(args2);
-    if (ret != 0) {
-        printf("Usage: deposit <user-name> <amt>\n");
-        return;
-    }
-    sscanf(args2, "%d", &amt);
 
-    if ((char*)hash_table_find(bank->user_balance_ht, args1) == NULL) {
-        printf("No such user\n");
-        return;
-    }
+	// handle balance
+	int amount = 0; 
+	int balance = 0;   
+	sscanf(amt, "%d", &amount);		
+   sscanf((char*)hash_table_find(bank->user_balance_ht, name), "%d", &balance);
 
-    memset(card_file_name, 0, MAX_CARD_FILE_NAME_SIZE);
-    strcat(card_file_name, args1);
-    strcat(card_file_name, ".card");
-
-    sscanf((char*)hash_table_find(bank->user_balance_ht, args1), "%d", &balance);
-
-    if (balance + amt < 0) {
+    if (balance + amount < 0) {
         printf("Too rich for this program\n");
         return;
     }
 
-    balance += amt;
+    balance += amount;
+	 char* tmp;
     tmp = (char*)malloc(64);
     sprintf(tmp, "%d", balance);
-    hash_table_del(bank->user_balance_ht, args1);
-    hash_table_add(bank->user_balance_ht, args1, tmp);
+    hash_table_del(bank->user_balance_ht, name);
+    hash_table_add(bank->user_balance_ht, name, tmp);
 
-    printf("$%d added to %s's account\n", amt, args1);
+    printf("$%d added to %s's account\n", amount, name);
 }
 
-void handle_balance(Bank* bank, char* args) {
-    int ret = 0;
-    char* balance;
 
-    if (args == NULL) {
-        printf("Usage: balance <user-name>\n");
-        return;
-    }
+void bank_balance(Bank* bank, char* name) {
+   if (!name || check_username(name)) {
+       printf("Usage: balance <user-name>\n");
+       return;
+   }
 
-    ret = check_username(args);
-    if (ret != 0) {
-        printf("Usage: balance <user-name>\n");
-        return;
-    }
+   char* balance;
+   balance = (char*)hash_table_find(bank->user_balance_ht, name);
+   if (!balance) {
+      printf("No such user\n");
+      return;
+   }
 
-    balance = (char*)hash_table_find(bank->user_balance_ht, args);
-    if (balance == NULL) {
-        printf("No such user\n");
-        return;
-    }
-
-    printf("$%s\n", balance);
-    return;
+   printf("$%s\n", balance);
+   return;
 }
+
 
 void bank_process_local_command(Bank *bank, char *command, size_t len)
 {
