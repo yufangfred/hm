@@ -86,14 +86,14 @@ int check_username(char* username) {
 
 /* [0-9][0-9][0-9][0-9] */
 int check_pin(char* pin) {    
-    int len = strlen(pin); //TODO: maybe overflow?
+    int len = strlen(args); //TODO: maybe overflow?
     if (len != 4) {
         return 1;
     }
 
 	 int i;
     for (i = 0; i < len; i++) {
-        if (!(pin[i] >= '0' && pin[i] <= '9')) {
+        if (!(args[i] >= '0' && args[i] <= '9')) {
 				return 1;            
         }
     }
@@ -152,81 +152,14 @@ void bank_create_user(Bank* bank, char* args1, char* args2, char* args3) {
    printf("Created user %s\n", args1);
 
 }
-void handle_deposit(Bank* bank, char* args1, char* args2) {
-    int ret = 0;
-    int amt = 0;
-    int balance = 0;
-    char *tmp;
-    char card_file_name[MAX_CARD_FILE_NAME_SIZE + 1];
 
-    if (args1 == NULL || args2 == NULL) {
-        printf("Usage: deposit <user-name> <amt>\n");
-        return;
-    }
+void bank_deposit() {
 
-    ret = check_username(args1); 
-    if (ret != 0) {
-        printf("Usage: deposit <user-name> <amt>\n");
-        return;
-    }
-
-    ret = check_amt(args2);
-    if (ret != 0) {
-        printf("Usage: deposit <user-name> <amt>\n");
-        return;
-    }
-    sscanf(args2, "%d", &amt);
-
-    if ((char*)hash_table_find(bank->user_balance_ht, args1) == NULL) {
-        printf("No such user\n");
-        return;
-    }
-
-    memset(card_file_name, 0, MAX_CARD_FILE_NAME_SIZE);
-    strcat(card_file_name, args1);
-    strcat(card_file_name, ".card");
-
-    sscanf((char*)hash_table_find(bank->user_balance_ht, args1), "%d", &balance);
-
-    if (balance + amt < 0) {
-        printf("Too rich for this program\n");
-        return;
-    }
-
-    balance += amt;
-    tmp = (char*)malloc(64);
-    sprintf(tmp, "%d", balance);
-    hash_table_del(bank->user_balance_ht, args1);
-    hash_table_add(bank->user_balance_ht, args1, tmp);
-
-    printf("$%d added to %s's account\n", amt, args1);
 }
 
-void handle_balance(Bank* bank, char* args) {
-    int ret = 0;
-    char* balance;
+void bank_balance() {
 
-    if (args == NULL) {
-        printf("Usage: balance <user-name>\n");
-        return;
-    }
-
-    ret = check_username(args);
-    if (ret != 0) {
-        printf("Usage: balance <user-name>\n");
-        return;
-    }
-
-    balance = (char*)hash_table_find(bank->user_balance_ht, args);
-    if (balance == NULL) {
-        printf("No such user\n");
-        return;
-    }
-
-    printf("$%s\n", balance);
-    return;
 }
-
 void bank_process_local_command(Bank *bank, char *command, size_t len)
 {
     // TODO: Implement the bank's local commands

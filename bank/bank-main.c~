@@ -4,14 +4,12 @@
  * You are free to change this as necessary.
  */
 
-
 #include <string.h>
 #include <sys/select.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include "bank.h"
 #include "ports.h"
-#include <errno.h>
 
 static const char prompt[] = "BANK: ";
 

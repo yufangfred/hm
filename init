@@ -1,0 +1,33 @@
+#!/bin/sh
+
+if [ $# -ne  1 ]; then
+	echo "Usage: init <filename>"
+	exit 62
+fi
+
+bank_name=$1".bank"
+atm_name=$1".atm"
+
+if [ -f $bank_name ] ; then
+	echo "Error: one of the files already exists"
+	exit 63
+fi
+
+if [ -f $atm_name ]; then
+	echo "Error: one of the files already exists"
+	exit 63
+fi
+
+echo -n "" > $bank_name
+echo -n "" > $atm_name
+
+if [ $? -ne 0 ]; then
+	echo "Error creating initialization files"
+	exit 64
+fi
+
+exit 0
+
+
+
+
