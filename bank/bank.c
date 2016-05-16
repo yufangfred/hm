@@ -9,9 +9,9 @@
 
 const int MAX_USER_NAME_SIZE = 250;
 const int MAX_CARD_NAME_SIZE = 256;
-const int MAX_USER_NUM = 10;
 const int MAX_LINE_SIZE = 500;
 const int PIN_SIZE = 4;
+const int MAX_USER_NUM = 100;
 
 
 Bank* bank_create()
@@ -262,6 +262,85 @@ void bank_process_local_command(Bank *bank, char *command, size_t len)
 	}
 }
 
+void bank_encrypt(Bank* bank, char* str, int len) {
+
+}
+
+void bank_decrypt(Bank *bank, char* str, int len){
+
+}
+
+void handle_balance_atm(Bank* bank, char* args) {
+    char* tmp;
+    char send_msg[MAX_LINE_SIZE + 1];
+    memset(send_msg, 0, MAX_LINE_SIZE);
+    
+    tmp = (char*)hash_table_find(bank->user_balance_ht, args);
+    printf("balance:%s\n", tmp);
+    strcat(send_msg, tmp);
+    
+    bank_encrypt(bank, send_msg, strlen(send_msg));
+    bank_send(bank, send_msg, strlen(send_msg));
+}
+
+
+void handle_user_logout(Bank* bank, char* args) {
+    char send_msg[MAX_LINE_SIZE + 1];
+    memset(send_msg, 0, MAX_LINE_SIZE);
+
+    if ((char*)hash_table_find(bank->logged_user_ht, args) == NULL)  {
+        strcat(send_msg, "No user logged in");
+    } else {
+        strcat(send_msg, "OK");
+        hash_table_del(bank->logged_user_ht, args);
+    }
+
+    bank_encrypt(bank, send_msg, strlen(send_msg));
+    bank_send(bank, send_msg, strlen(send_msg));
+    return;
+}
+
+void handle_user_login(Bank* bank, char* args) {
+    char send_msg[MAX_LINE_SIZE + 1];
+    memset(send_msg, 0, MAX_LINE_SIZE);
+
+    if ((char*)hash_table_find(bank->user_balance_ht, args) == NULL ||
+            (char*)hash_table_find(bank->logged_user_ht, args) != NULL)  {
+        strcat(send_msg, "NA");
+    } else {
+        strcat(send_msg, "OK");
+        hash_table_add(bank->logged_user_ht, args, "1");
+    }
+
+    bank_encrypt(bank, send_msg, strlen(send_msg));
+    bank_send(bank, send_msg, strlen(send_msg));
+}
+
+
+void handle_withdraw(Bank* bank, char* args1, char* args2) {
+    char* tmp;
+    int balance;
+    int amt;
+    char send_msg[MAX_LINE_SIZE + 1];
+    memset(send_msg, 0, MAX_LINE_SIZE);
+    
+    tmp = (char*)hash_table_find(bank->user_balance_ht, args1);
+    sscanf(tmp, "%d", &balance);
+    sscanf(args2, "%d", &amt);
+    if (balance < amt) {
+        strcat(send_msg, "IF");
+    } else {
+        strcat(send_msg, "AD");
+        balance -= amt;
+        memset(tmp, 0, 64);
+        sprintf(tmp, "%d", balance);
+        hash_table_add(bank->user_balance_ht, args1, tmp);
+    }
+
+    bank_encrypt(bank, send_msg, strlen(send_msg));
+    bank_send(bank, send_msg, strlen(send_msg));
+}
+
 void bank_process_remote_command(Bank *bank, char *command, size_t len)
 {
     // TODO: Implement the bank side of the ATM-bank protocol
@@ -280,4 +359,25 @@ void bank_process_remote_command(Bank *bank, char *command, size_t len)
     printf("Received the following:\n");
     fputs(command, stdout);
 	*/
+
+    char cmd[64];
+    char args1[2048];
+    char args2[2048];
+
+    bank_decrypt(bank, command, strlen(command));    
+    sscanf(command, "%s%s%s", cmd, args1, args2);
+
+    if (strcmp("user-login", cmd) == 0) {
+        handle_user_login(bank, args1);
+    } else if (strcmp("withdraw", cmd) == 0) {
+        handle_withdraw(bank, args1, args2);
+    } else if (strcmp("balance", cmd) == 0) {
+        handle_balance_atm(bank, args1);
+    } else if (strcmp("user-logout", cmd) == 0) {
+        handle_user_logout(bank, args1);
+    }
+
 }
+
+
+

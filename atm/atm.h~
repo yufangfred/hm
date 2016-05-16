@@ -25,6 +25,8 @@ typedef struct _ATM
 
     // Protocol state
     // TODO add more, as needed
+	 int user_logged;
+	 char username[251];
 } ATM;
 
 ATM* atm_create();
