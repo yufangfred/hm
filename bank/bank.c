@@ -263,11 +263,19 @@ void bank_process_local_command(Bank *bank, char *command, size_t len)
 }
 
 void bank_encrypt(Bank* bank, char* str, int len) {
-
+	unsigned char key[] = {0x00,0x11,0x22,0x33,0x44,0x55,0x66,0x77,0x88,0x99,0xAA,0xBB,0xCC};
+	int i;	
+	for (i = 0; i < len; i++) {
+		str[i] ^= key[i];		
+	}
 }
 
 void bank_decrypt(Bank *bank, char* str, int len){
-
+	unsigned char key[] = {0x00,0x11,0x22,0x33,0x44,0x55,0x66,0x77,0x88,0x99,0xAA,0xBB,0xCC};
+	int i;	
+	for (i = 0; i < len; i++) {
+		str[i] ^= key[i];		
+	}
 }
 
 void handle_balance_atm(Bank* bank, char* args) {

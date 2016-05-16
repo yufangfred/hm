@@ -239,7 +239,7 @@ void atm_withdraw (char* arg, ATM* atm) {
 }
 
 
-void handle_balance(ATM* atm) {
+void atm_balance(ATM* atm) {
     char send_msg[MAX_LINE_SIZE + 1];
     char recv_msg[MAX_LINE_SIZE + 1];
 
